@@ -69,3 +69,4 @@ export const initialProducts = [
     createdAt: Date.now() + 2,
   },
 ];
+export const contentDoc = doc(db, "siteContent", "main");
