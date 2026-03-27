@@ -167,16 +167,14 @@ export default function App() {
 
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart]);
   const itemsCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
-  const shippingInfo = useMemo(() => calculateShipping(cep, subtotal), [cep, subtotal]);
-  const total = subtotal + (shippingInfo?.shipping || 0);
-  const whatsappUrl = `https://wa.me/${STORE.whatsapp}?text=${buildWhatsAppMessage(cart, subtotal, shippingInfo, formatCep(cep))}`;
+const shippingInfo = useMemo(() => calculateShipping(cep, subtotal), [cep, subtotal]);
+const total = subtotal + (shippingInfo?.shipping || 0);
+const whatsappUrl = `https://wa.me/${STORE.whatsapp}?text=${buildWhatsAppMessage(cart, subtotal, shippingInfo, formatCep(cep))}`;
 
- return (
+return (
   <div className="min-h-screen bg-[#f4efe6] text-[#2a241f]">
-    
     <header className="sticky top-0 z-40 border-b border-[#cdb693] bg-[#244634]/95 text-white backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-6">
-
         <div className="flex items-center gap-3">
           <img
             src="/logo.png"
@@ -200,6 +198,5 @@ export default function App() {
           <a href="#painel">Painel</a>
           <a href="#contato">Contato</a>
         </nav>
-
       </div>
     </header>
