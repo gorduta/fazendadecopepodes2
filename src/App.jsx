@@ -200,3 +200,9 @@ return (
         </nav>
       </div>
     </header>
+
+    <div>Site funcionando</div>
+
+  </div>
+);
+}
