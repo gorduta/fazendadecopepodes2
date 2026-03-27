@@ -12,6 +12,12 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyARrqIeDcMwcFx-_LtJmr3m98tTUjVVj8Y",
@@ -25,6 +31,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const auth = getAuth(app);
 const productsCollection = collection(db, "products");
 
 const STORE = {
@@ -37,8 +44,7 @@ const STORE = {
   email: "contato@fazendadecopepodes.com.br",
   pixKey: "64.963.562/0001-13",
   mercadoPagoLink: "https://link.mercadopago.com.br/fazendadecopepodes",
-  adminPassword: "1234",
-  build: "v1.6.0",
+  build: "v1.7.0",
 };
 
 const initialProducts = [
@@ -143,8 +149,11 @@ function buildWhatsAppMessage(items, subtotal, shippingInfo, cep) {
 }
 
 function ProductAdmin({ products, refreshProducts, isLoading }) {
-  const [logged, setLogged] = useState(false);
+  const [user, setUser] = useState(null);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -158,6 +167,14 @@ function ProductAdmin({ products, refreshProducts, isLoading }) {
     image: "",
   });
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const resetForm = () => {
     setForm({
       name: "",
@@ -169,6 +186,24 @@ function ProductAdmin({ products, refreshProducts, isLoading }) {
       image: "",
     });
     setEditingId(null);
+  };
+
+  const login = async () => {
+    try {
+      setAuthError("");
+      setAuthLoading(true);
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      setAuthError("Login inválido. Confira e-mail e senha do Firebase Auth.");
+      console.error(error);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    await signOut(auth);
+    setAuthError("");
   };
 
   const uploadImageFile = async (file) => {
@@ -263,26 +298,39 @@ function ProductAdmin({ products, refreshProducts, isLoading }) {
     }
   };
 
-  if (!logged) {
+  if (authLoading) {
+    return (
+      <div className="rounded-[2rem] border border-[#dbc8ac] bg-white p-8 shadow-lg text-[#5c5147]">
+        Verificando acesso...
+      </div>
+    );
+  }
+
+  if (!user) {
     return (
       <div className="rounded-[2rem] border border-[#dbc8ac] bg-white p-8 shadow-lg">
-        <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#8b5e3c]">Painel</p>
-        <h3 className="mt-2 text-3xl font-black text-[#244634]">Área administrativa</h3>
+        <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#8b5e3c]">Painel protegido</p>
+        <h3 className="mt-2 text-3xl font-black text-[#244634]">Entrar com Firebase Auth</h3>
         <p className="mt-4 text-sm leading-7 text-[#5c5147]">
-          Painel com upload de imagem, categoria e edição rápida de produto.
+          Agora o painel não usa mais senha fixa no código. Entre com o usuário criado no Firebase Authentication.
         </p>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Seu e-mail"
+          className="mt-5 w-full rounded-2xl border border-[#cfbb9b] bg-[#fcfaf5] px-4 py-4 outline-none focus:border-[#8b5e3c]"
+        />
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Digite a senha do painel"
-          className="mt-5 w-full rounded-2xl border border-[#cfbb9b] bg-[#fcfaf5] px-4 py-4 outline-none focus:border-[#8b5e3c]"
+          placeholder="Sua senha"
+          className="mt-4 w-full rounded-2xl border border-[#cfbb9b] bg-[#fcfaf5] px-4 py-4 outline-none focus:border-[#8b5e3c]"
         />
+        {authError && <p className="mt-3 text-sm text-red-600">{authError}</p>}
         <button
-          onClick={() => {
-            if (password === STORE.adminPassword) setLogged(true);
-            else alert("Senha incorreta");
-          }}
+          onClick={login}
           className="mt-4 rounded-2xl bg-[#244634] px-5 py-4 text-sm font-bold text-white"
         >
           Entrar no painel
@@ -295,16 +343,25 @@ function ProductAdmin({ products, refreshProducts, isLoading }) {
     <div className="rounded-[2rem] border border-[#dbc8ac] bg-white p-8 shadow-lg">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#8b5e3c]">Painel</p>
+          <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#8b5e3c]">Painel protegido</p>
           <h3 className="mt-2 text-3xl font-black text-[#244634]">Gerenciar produtos</h3>
+          <p className="mt-2 text-sm text-[#5c5147]">Logado como {user.email}</p>
         </div>
-        <button
-          onClick={restoreDefaults}
-          disabled={saving || uploadingImage}
-          className="rounded-2xl border border-[#244634] px-4 py-3 text-sm font-bold text-[#244634] disabled:opacity-50"
-        >
-          Restaurar padrão
-        </button>
+        <div className="flex gap-3 flex-wrap">
+          <button
+            onClick={restoreDefaults}
+            disabled={saving || uploadingImage}
+            className="rounded-2xl border border-[#244634] px-4 py-3 text-sm font-bold text-[#244634] disabled:opacity-50"
+          >
+            Restaurar padrão
+          </button>
+          <button
+            onClick={logout}
+            className="rounded-2xl bg-[#8b5e3c] px-4 py-3 text-sm font-bold text-white"
+          >
+            Sair
+          </button>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -351,7 +408,7 @@ function ProductAdmin({ products, refreshProducts, isLoading }) {
             className="block w-full text-sm text-[#5c5147]"
           />
           <p className="mt-2 text-xs text-[#7a6a59]">
-            {uploadingImage ? "Enviando imagem..." : "Você pode enviar a foto sem precisar colar link."}
+            {uploadingImage ? "Enviando imagem..." : "Somente usuário autenticado consegue enviar imagem e salvar produto."}
           </p>
         </div>
 
@@ -808,10 +865,9 @@ export default function App() {
           <div className="rounded-[2rem] border border-[#dbc8ac] bg-[#f8f1df] p-8 shadow-lg">
             <h3 className="text-2xl font-black text-[#244634]">Como usar o painel</h3>
             <ul className="mt-5 space-y-3 text-sm leading-7 text-[#5c5147]">
-              <li>• Entre com a senha <strong>1234</strong>.</li>
-              <li>• Faça upload da imagem direto no painel.</li>
-              <li>• Use o botão editar para alterar produto sem recriar.</li>
-              <li>• Organize os produtos por categoria para facilitar a busca.</li>
+              <li>• Agora o painel usa login com Firebase Authentication.</li>
+              <li>• Só usuário autenticado consegue editar produtos.</li>
+              <li>• Proteja Firestore e Storage pelas regras abaixo.</li>
             </ul>
           </div>
         </div>
@@ -978,7 +1034,7 @@ export default function App() {
             <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-[#d7c08d]">Versão</h4>
             <div className="mt-4 space-y-2 text-sm text-white/85">
               <p>Build: {STORE.build}</p>
-              <p>Versão completa sem dependência de ícones externos.</p>
+              <p>Painel protegido com Firebase Authentication.</p>
             </div>
           </div>
         </div>
