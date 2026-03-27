@@ -18,6 +18,21 @@ export default function App() {
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
+  const [content, setContent] = useState(defaultContent);
+  const loadContent = async () => {
+  try {
+    const snap = await getDoc(contentDoc);
+
+    if (!snap.exists()) {
+      await setDoc(contentDoc, defaultContent);
+      setContent(defaultContent);
+    } else {
+      setContent(snap.data());
+    }
+  } catch (error) {
+    console.error(error);
+  }
+};
 
   const refreshProducts = async () => {
     try {
