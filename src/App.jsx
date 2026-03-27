@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { addDoc, getDocs, orderBy, query } from "firebase/firestore";
 import ProductAdmin from "./components/ProductAdmin";
 import { STORE, initialProducts, productsCollection, contentDoc } from "./lib/firebase";
+import { useState, useEffect, useMemo } from "react";
 import {
   buildWhatsAppMessage,
   calculateShipping,
@@ -10,6 +11,10 @@ import {
 } from "./lib/utils";
 
 export default function App() {
+  const [cart, setCart] = useState([]);
+const [cep, setCep] = useState("");
+const [products, setProducts] = useState([]);
+const [content, setContent] = useState(null);
   const [cart, setCart] = useState([]);
   const [cep, setCep] = useState("");
   const [showCart, setShowCart] = useState(false);
