@@ -26,6 +26,8 @@ import {
   Pencil,
   Upload,
   Save,
+  Search,
+  Instagram,
 } from "lucide-react";
 
 const firebaseConfig = {
@@ -48,10 +50,12 @@ const STORE = {
   whatsappLabel: "(14) 99871-0044",
   originCep: "14051-260",
   instagram: "@fazendadecopepodes",
+  instagramUrl: "https://instagram.com/fazendadecopepodes",
   email: "contato@fazendadecopepodes.com.br",
   pixKey: "64.963.562/0001-13",
   mercadoPagoLink: "https://link.mercadopago.com.br/fazendadecopepodes",
   adminPassword: "1234",
+  build: "v1.2.0",
 };
 
 const initialProducts = [
@@ -60,6 +64,7 @@ const initialProducts = [
     price: 39.9,
     badge: "Mais vendido",
     size: "100 ml",
+    category: "Starter",
     description:
       "Cultura inicial para fortalecer o ecossistema do aquário marinho com alimento vivo de qualidade.",
     image:
@@ -71,6 +76,7 @@ const initialProducts = [
     price: 69.9,
     badge: "Alta densidade",
     size: "250 ml",
+    category: "Premium",
     description:
       "Maior concentração de copepodes para nutrição eficiente de peixes, corais e outros organismos.",
     image:
@@ -82,6 +88,7 @@ const initialProducts = [
     price: 119.9,
     badge: "Kit completo",
     size: "Combo",
+    category: "Kit",
     description:
       "Solução completa para quem quer iniciar e manter uma fazenda própria com mais estabilidade.",
     image:
@@ -161,6 +168,7 @@ function ProductAdmin({ products, refreshProducts, isLoading }) {
     price: "",
     badge: "Novo",
     size: "",
+    category: "",
     description: "",
     image: "",
   });
@@ -171,6 +179,7 @@ function ProductAdmin({ products, refreshProducts, isLoading }) {
       price: "",
       badge: "Novo",
       size: "",
+      category: "",
       description: "",
       image: "",
     });
@@ -209,6 +218,7 @@ function ProductAdmin({ products, refreshProducts, isLoading }) {
         price: Number(form.price),
         badge: form.badge || "Novo",
         size: form.size || "Unidade",
+        category: form.category || "Sem categoria",
         description: form.description,
         image: form.image,
       };
@@ -239,6 +249,7 @@ function ProductAdmin({ products, refreshProducts, isLoading }) {
       price: String(product.price || ""),
       badge: product.badge || "Novo",
       size: product.size || "",
+      category: product.category || "",
       description: product.description || "",
       image: product.image || "",
     });
@@ -278,7 +289,7 @@ function ProductAdmin({ products, refreshProducts, isLoading }) {
         <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#8b5e3c]">Painel</p>
         <h3 className="mt-2 text-3xl font-black text-[#244634]">Área administrativa</h3>
         <p className="mt-4 text-sm leading-7 text-[#5c5147]">
-          Agora você pode subir imagem direto no painel e editar produtos com mais facilidade.
+          Agora você pode subir imagem direto no painel, organizar por categoria e editar produtos com mais facilidade.
         </p>
         <input
           type="password"
@@ -340,6 +351,12 @@ function ProductAdmin({ products, refreshProducts, isLoading }) {
           placeholder="Tamanho / volume"
           value={form.size}
           onChange={(e) => setForm({ ...form, size: e.target.value })}
+        />
+        <input
+          className="rounded-2xl border border-[#cfbb9b] bg-[#fcfaf5] px-4 py-4 outline-none md:col-span-2"
+          placeholder="Categoria"
+          value={form.category}
+          onChange={(e) => setForm({ ...form, category: e.target.value })}
         />
 
         <div className="rounded-2xl border border-dashed border-[#cfbb9b] bg-[#fcfaf5] p-4 md:col-span-2">
@@ -423,7 +440,9 @@ function ProductAdmin({ products, refreshProducts, isLoading }) {
                 <div>
                   <h4 className="font-black text-[#244634]">{product.name}</h4>
                   <p className="text-sm text-[#5c5147]">{currency(product.price)}</p>
-                  <p className="text-xs text-[#8b5e3c]">{product.size}</p>
+                  <p className="text-xs text-[#8b5e3c]">
+                    {product.size} • {product.category || "Sem categoria"}
+                  </p>
                 </div>
               </div>
 
@@ -457,6 +476,8 @@ export default function FazendaCopepodes() {
   const [showPix, setShowPix] = useState(false);
   const [products, setProducts] = useState([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("Todos");
 
   const refreshProducts = async () => {
     try {
@@ -520,12 +541,28 @@ export default function FazendaCopepodes() {
 
   const shippingInfo = useMemo(() => calculateShipping(cep, subtotal), [cep, subtotal]);
   const total = subtotal + (shippingInfo?.shipping || 0);
+
   const whatsappUrl = `https://wa.me/${STORE.whatsapp}?text=${buildWhatsAppMessage(
     cart,
     subtotal,
     shippingInfo,
     formatCep(cep)
   )}`;
+
+  const categories = [
+    "Todos",
+    ...new Set(products.map((product) => product.category || "Sem categoria")),
+  ];
+
+  const visibleProducts = products.filter((product) => {
+    const text = `${product.name} ${product.description} ${product.category || ""}`.toLowerCase();
+    const matchesSearch = text.includes(searchTerm.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "Todos" ||
+      (product.category || "Sem categoria") === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="min-h-screen bg-[#f4efe6] text-[#2a241f]">
@@ -616,13 +653,37 @@ export default function FazendaCopepodes() {
           </p>
         </div>
 
+        <div className="mb-8 grid gap-4 rounded-[2rem] border border-[#dbc8ac] bg-white p-5 shadow-md md:grid-cols-[1fr_220px]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8b5e3c]" />
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar produto, descrição ou categoria"
+              className="w-full rounded-2xl border border-[#cfbb9b] bg-[#fcfaf5] py-4 pl-11 pr-4 outline-none focus:border-[#8b5e3c]"
+            />
+          </div>
+
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="rounded-2xl border border-[#cfbb9b] bg-[#fcfaf5] px-4 py-4 outline-none focus:border-[#8b5e3c]"
+          >
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {isLoadingProducts ? (
           <div className="flex items-center gap-2 text-sm text-[#5c5147]">
             <Loader2 className="h-4 w-4 animate-spin" /> Carregando produtos...
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {products.map((product) => (
+            {visibleProducts.map((product) => (
               <article
                 key={product.id}
                 className="overflow-hidden rounded-[2rem] border border-[#dbc8ac] bg-white shadow-lg transition hover:-translate-y-1 hover:shadow-xl"
@@ -637,7 +698,9 @@ export default function FazendaCopepodes() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h4 className="text-2xl font-black text-[#2a241f]">{product.name}</h4>
-                      <p className="mt-1 text-sm font-semibold text-[#8b5e3c]">{product.size}</p>
+                      <p className="mt-1 text-sm font-semibold text-[#8b5e3c]">
+                        {product.size} • {product.category || "Sem categoria"}
+                      </p>
                     </div>
                     <span className="whitespace-nowrap rounded-full bg-[#f8f1df] px-3 py-2 text-sm font-black text-[#244634]">
                       {currency(product.price)}
@@ -654,6 +717,12 @@ export default function FazendaCopepodes() {
                 </div>
               </article>
             ))}
+          </div>
+        )}
+
+        {!isLoadingProducts && visibleProducts.length === 0 && (
+          <div className="mt-6 rounded-2xl border border-[#dbc8ac] bg-white p-8 text-center text-sm text-[#5c5147] shadow-md">
+            Nenhum produto encontrado para essa busca.
           </div>
         )}
       </section>
@@ -769,7 +838,7 @@ export default function FazendaCopepodes() {
               <li>• Entre com a senha <strong>1234</strong>.</li>
               <li>• Faça upload da imagem direto no painel.</li>
               <li>• Use o botão editar para alterar produto sem recriar.</li>
-              <li>• Os produtos ficam salvos na nuvem pelo Firebase.</li>
+              <li>• Organize produtos por categoria.</li>
             </ul>
           </div>
         </div>
@@ -904,6 +973,55 @@ export default function FazendaCopepodes() {
           </div>
         </div>
       )}
+
+      <footer className="mt-12 border-t border-[#d6c29f] bg-[#244634] text-white">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 md:grid-cols-3 md:px-6">
+          <div>
+            <div className="flex items-center gap-3">
+              <img
+                src="/logo.png"
+                alt="Logo Fazenda de Copepodes"
+                className="h-12 w-12 rounded-full bg-white object-contain"
+              />
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#d7c08d]">
+                  Fazenda de Copepodes
+                </p>
+                <p className="text-sm text-white/75">Cultivo natural para aquário marinho</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-[#d7c08d]">Contato</h4>
+            <div className="mt-4 space-y-3 text-sm text-white/85">
+              <a
+                href={`https://wa.me/${STORE.whatsapp}`}
+                className="flex items-center gap-2 hover:text-white"
+              >
+                <MessageCircle className="h-4 w-4" /> {STORE.whatsappLabel}
+              </a>
+              <a
+                href={STORE.instagramUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 hover:text-white"
+              >
+                <Instagram className="h-4 w-4" /> {STORE.instagram}
+              </a>
+              <p>{STORE.email}</p>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-[#d7c08d]">Versão</h4>
+            <div className="mt-4 space-y-2 text-sm text-white/85">
+              <p>Build: {STORE.build}</p>
+              <p>Atualizado com busca, categorias, upload e edição no painel.</p>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
