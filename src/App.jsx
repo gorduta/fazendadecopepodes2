@@ -1,20 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { addDoc, getDocs, orderBy, query } from "firebase/firestore";
-import ProductAdmin from "./components/ProductAdmin";
-import { STORE, initialProducts, productsCollection, contentDoc } from "./lib/firebase";
-import { useState, useEffect, useMemo } from "react";
+import { addDoc, getDoc, getDocs, orderBy, query, setDoc } from "firebase/firestore";
+import AdminPanel from "./components/AdminPanel";
 import {
+  STORE,
   buildWhatsAppMessage,
   calculateShipping,
+  contentDoc,
   currency,
+  defaultContent,
   formatCep,
-} from "./lib/utils";
+  initialProducts,
+  productsCollection,
+} from "./lib/store-core";
 
 export default function App() {
-  const [cart, setCart] = useState([]);
-const [cep, setCep] = useState("");
-const [products, setProducts] = useState([]);
-const [content, setContent] = useState(null);
   const [cart, setCart] = useState([]);
   const [cep, setCep] = useState("");
   const [showCart, setShowCart] = useState(false);
@@ -24,20 +23,6 @@ const [content, setContent] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [content, setContent] = useState(defaultContent);
-  const loadContent = async () => {
-  try {
-    const snap = await getDoc(contentDoc);
-
-    if (!snap.exists()) {
-      await setDoc(contentDoc, defaultContent);
-      setContent(defaultContent);
-    } else {
-      setContent(snap.data());
-    }
-  } catch (error) {
-    console.error(error);
-  }
-};
 
   const refreshProducts = async () => {
     try {
@@ -48,35 +33,6 @@ const [content, setContent] = useState(null);
 
       if (items.length === 0) {
         await Promise.all(initialProducts.map((product) => addDoc(productsCollection, product)));
-        const defaultContent = {
-  hero: {
-    title: "Alimento vivo de confiança",
-    subtitle: "Para aquário marinho",
-    text: "Copepodes de alta qualidade com envio rápido.",
-    image: "https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?auto=format&fit=crop&w=1400&q=80",
-    button1: "Comprar agora",
-    button2: "Falar no WhatsApp",
-  },
-  features: [
-    {
-      title: "Foco em aquarismo",
-      text: "Produtos pensados para aquário marinho",
-    },
-    {
-      title: "Envio rápido",
-      text: "Entrega ágil para todo Brasil",
-    },
-    {
-      title: "Alta qualidade",
-      text: "Cultivo controlado e seguro",
-    },
-  ],
-  contact: {
-    whatsapp: STORE.whatsappLabel,
-    instagram: STORE.instagram,
-    email: STORE.email,
-  },
-};
         const seededSnapshot = await getDocs(q);
         const seededItems = seededSnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
         setProducts(seededItems);
@@ -91,8 +47,23 @@ const [content, setContent] = useState(null);
     }
   };
 
+  const loadContent = async () => {
+    try {
+      const snap = await getDoc(contentDoc);
+      if (!snap.exists()) {
+        await setDoc(contentDoc, defaultContent);
+        setContent(defaultContent);
+      } else {
+        setContent({ ...defaultContent, ...snap.data() });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     refreshProducts();
+    loadContent();
   }, []);
 
   const addToCart = (product) => {
@@ -159,7 +130,7 @@ const [content, setContent] = useState(null);
             <img src="/logo.png" alt="Logo Fazenda de Copepodes" className="h-12 w-12 rounded-full bg-white object-contain" />
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-[#d7c08d]">Aquário marinho</p>
-              <h1 className="text-2xl font-black md:text-3xl">Fazenda de Copepodes</h1>
+              <h1 className="text-2xl font-black md:text-3xl">{STORE.name}</h1>
             </div>
           </div>
 
@@ -185,28 +156,27 @@ const [content, setContent] = useState(null);
       <section className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-2 md:items-center md:px-6 md:py-20">
         <div>
           <span className="inline-flex items-center rounded-full border border-[#b08a5a] bg-[#f8f1df] px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#7b552d]">
-            Cultivo natural e envio rápido
+            {content.hero.subtitle}
           </span>
           <h2 className="mt-5 text-4xl font-black leading-tight text-[#244634] md:text-6xl">
-            Alimento vivo de confiança para seu aquário marinho
+            {content.hero.title}
           </h2>
           <p className="mt-5 max-w-xl text-lg leading-8 text-[#5c5147]">
-            Uma loja com identidade própria, cores inspiradas no seu logo e foco total em copepodes,
-            praticidade no pedido e checkout rápido por WhatsApp, Pix e Mercado Pago.
+            {content.hero.text}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <a href="#produtos" className="rounded-2xl bg-[#8b5e3c] px-6 py-4 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5">
-              Comprar agora
+              {content.hero.button1}
             </a>
             <a href={`https://wa.me/${STORE.whatsapp}`} className="rounded-2xl border border-[#244634] px-6 py-4 text-sm font-bold text-[#244634] transition hover:bg-[#244634] hover:text-white">
-              Falar no WhatsApp
+              {content.hero.button2}
             </a>
           </div>
         </div>
 
         <div className="rounded-[2rem] border border-[#d8c8af] bg-gradient-to-br from-[#f7f0e4] to-white p-5 shadow-2xl">
           <div className="overflow-hidden rounded-[1.5rem] border border-[#e7dcc9] bg-white">
-            <img src="https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?auto=format&fit=crop&w=1400&q=80" alt="Aquário marinho" className="h-[420px] w-full object-cover" />
+            <img src={content.hero.image} alt="Banner da loja" className="h-[420px] w-full object-cover" />
           </div>
         </div>
       </section>
@@ -235,16 +205,14 @@ const [content, setContent] = useState(null);
         </div>
 
         {isLoadingProducts ? (
-          <div className="flex items-center gap-2 text-sm text-[#5c5147]">Carregando produtos...</div>
+          <div className="text-sm text-[#5c5147]">Carregando produtos...</div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {visibleProducts.map((product) => (
               <article key={product.id} className="overflow-hidden rounded-[2rem] border border-[#dbc8ac] bg-white shadow-lg transition hover:-translate-y-1 hover:shadow-xl">
                 <div className="relative">
                   <img src={product.image} alt={product.name} className="h-72 w-full object-cover" />
-                  <span className="absolute left-4 top-4 rounded-full bg-[#244634] px-3 py-1 text-xs font-bold uppercase tracking-[0.15em] text-[#f1dfb3]">
-                    {product.badge}
-                  </span>
+                  <span className="absolute left-4 top-4 rounded-full bg-[#244634] px-3 py-1 text-xs font-bold uppercase tracking-[0.15em] text-[#f1dfb3]">{product.badge}</span>
                 </div>
                 <div className="p-6">
                   <div className="flex items-start justify-between gap-4">
@@ -252,9 +220,7 @@ const [content, setContent] = useState(null);
                       <h4 className="text-2xl font-black text-[#2a241f]">{product.name}</h4>
                       <p className="mt-1 text-sm font-semibold text-[#8b5e3c]">{product.size} • {product.category || "Sem categoria"}</p>
                     </div>
-                    <span className="whitespace-nowrap rounded-full bg-[#f8f1df] px-3 py-2 text-sm font-black text-[#244634]">
-                      {currency(product.price)}
-                    </span>
+                    <span className="whitespace-nowrap rounded-full bg-[#f8f1df] px-3 py-2 text-sm font-black text-[#244634]">{currency(product.price)}</span>
                   </div>
                   <p className="mt-4 text-sm leading-7 text-[#5c5147]">{product.description}</p>
                   <button onClick={() => addToCart(product)} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#244634] px-4 py-4 text-sm font-bold text-white transition hover:opacity-95">
@@ -268,8 +234,20 @@ const [content, setContent] = useState(null);
         )}
       </section>
 
+      <section id="beneficios" className="mx-auto max-w-7xl px-4 py-10 md:px-6 md:py-14">
+        <div className="grid gap-6 md:grid-cols-3">
+          {content.features.map((item, index) => (
+            <div key={index} className="rounded-[2rem] border border-[#dbc8ac] bg-white p-7 shadow-md">
+              <div className="text-3xl">{item.emoji}</div>
+              <h4 className="mt-4 text-xl font-black text-[#244634]">{item.title}</h4>
+              <p className="mt-3 text-sm leading-7 text-[#5c5147]">{item.text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section id="painel" className="mx-auto max-w-7xl px-4 py-10 md:px-6 md:py-14">
-        <ProductAdmin products={products} refreshProducts={refreshProducts} isLoading={isLoadingProducts} />
+        <AdminPanel products={products} refreshProducts={refreshProducts} isLoading={isLoadingProducts} />
       </section>
 
       <section id="contato" className="mx-auto max-w-7xl px-4 pb-20 pt-10 md:px-6 md:pt-14">
@@ -278,10 +256,10 @@ const [content, setContent] = useState(null);
             <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#8b5e3c]">Contato</p>
             <h3 className="mt-2 text-3xl font-black text-[#244634]">Atendimento direto</h3>
             <div className="mt-6 space-y-3 text-sm leading-7 text-[#5c5147]">
-              <p><strong>WhatsApp:</strong> {STORE.whatsappLabel}</p>
+              <p><strong>WhatsApp:</strong> {content.contact.whatsappLabel}</p>
               <p><strong>CEP de origem:</strong> {STORE.originCep}</p>
-              <p><strong>Instagram:</strong> {STORE.instagram}</p>
-              <p><strong>E-mail:</strong> {STORE.email}</p>
+              <p><strong>Instagram:</strong> {content.contact.instagram}</p>
+              <p><strong>E-mail:</strong> {content.contact.email}</p>
             </div>
           </div>
 
@@ -289,8 +267,8 @@ const [content, setContent] = useState(null);
             <h3 className="text-2xl font-black text-[#244634]">Como usar o painel</h3>
             <ul className="mt-5 space-y-3 text-sm leading-7 text-[#5c5147]">
               <li>• Agora o painel usa login com Firebase Authentication.</li>
-              <li>• Só usuário autenticado consegue editar produtos.</li>
-              <li>• Proteja Firestore e Storage pelas regras abaixo.</li>
+              <li>• Só usuário autenticado consegue editar produtos e conteúdo.</li>
+              <li>• Banner, tópicos e contato podem ser alterados sem mexer no código.</li>
             </ul>
           </div>
         </div>
@@ -344,18 +322,9 @@ const [content, setContent] = useState(null);
                 </div>
 
                 <div className="mt-6 grid gap-3">
-                  <a href={whatsappUrl} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 rounded-2xl bg-[#25d366] px-4 py-4 text-sm font-bold text-white">
-                    <span>💬</span>
-                    Finalizar pelo WhatsApp
-                  </a>
-                  <button onClick={() => setShowPix(true)} className="flex items-center justify-center gap-2 rounded-2xl bg-[#8b5e3c] px-4 py-4 text-sm font-bold text-white">
-                    <span>📱</span>
-                    Pagar com Pix
-                  </button>
-                  <a href={STORE.mercadoPagoLink} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 rounded-2xl border border-[#244634] px-4 py-4 text-sm font-bold text-[#244634]">
-                    <span>💳</span>
-                    Pagar com Mercado Pago
-                  </a>
+                  <a href={whatsappUrl} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 rounded-2xl bg-[#25d366] px-4 py-4 text-sm font-bold text-white"><span>💬</span>Finalizar pelo WhatsApp</a>
+                  <button onClick={() => setShowPix(true)} className="flex items-center justify-center gap-2 rounded-2xl bg-[#8b5e3c] px-4 py-4 text-sm font-bold text-white"><span>📱</span>Pagar com Pix</button>
+                  <a href={STORE.mercadoPagoLink} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 rounded-2xl border border-[#244634] px-4 py-4 text-sm font-bold text-[#244634]"><span>💳</span>Pagar com Mercado Pago</a>
                 </div>
               </>
             )}
@@ -378,9 +347,7 @@ const [content, setContent] = useState(null);
               <p className="mt-2"><strong>Chave Pix:</strong> {STORE.pixKey}</p>
               <p className="mt-2">Pagamento manual via Pix com conferência no atendimento.</p>
             </div>
-            <button onClick={() => navigator.clipboard?.writeText(STORE.pixKey)} className="mt-5 w-full rounded-2xl bg-[#244634] px-4 py-4 text-sm font-bold text-white">
-              Copiar chave Pix
-            </button>
+            <button onClick={() => navigator.clipboard?.writeText(STORE.pixKey)} className="mt-5 w-full rounded-2xl bg-[#244634] px-4 py-4 text-sm font-bold text-white">Copiar chave Pix</button>
           </div>
         </div>
       )}
@@ -391,7 +358,7 @@ const [content, setContent] = useState(null);
             <div className="flex items-center gap-3">
               <img src="/logo.png" alt="Logo Fazenda de Copepodes" className="h-12 w-12 rounded-full bg-white object-contain" />
               <div>
-                <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#d7c08d]">Fazenda de Copepodes</p>
+                <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#d7c08d]">{STORE.name}</p>
                 <p className="text-sm text-white/75">Cultivo natural para aquário marinho</p>
               </div>
             </div>
@@ -400,9 +367,9 @@ const [content, setContent] = useState(null);
           <div>
             <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-[#d7c08d]">Contato</h4>
             <div className="mt-4 space-y-3 text-sm text-white/85">
-              <a href={`https://wa.me/${STORE.whatsapp}`} className="flex items-center gap-2 hover:text-white"><span>💬</span> {STORE.whatsappLabel}</a>
-              <a href={STORE.instagramUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-white"><span>📷</span> {STORE.instagram}</a>
-              <p>{STORE.email}</p>
+              <a href={`https://wa.me/${STORE.whatsapp}`} className="flex items-center gap-2 hover:text-white"><span>💬</span> {content.contact.whatsappLabel}</a>
+              <a href={STORE.instagramUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-white"><span>📷</span> {content.contact.instagram}</a>
+              <p>{content.contact.email}</p>
             </div>
           </div>
 
@@ -410,7 +377,7 @@ const [content, setContent] = useState(null);
             <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-[#d7c08d]">Versão</h4>
             <div className="mt-4 space-y-2 text-sm text-white/85">
               <p>Build: {STORE.build}</p>
-              <p>Painel protegido com Firebase Authentication.</p>
+              <p>{content.footer.note}</p>
             </div>
           </div>
         </div>
