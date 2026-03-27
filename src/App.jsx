@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { addDoc, getDocs, orderBy, query } from "firebase/firestore";
 import ProductAdmin from "./components/ProductAdmin";
-import { STORE, initialProducts, productsCollection } from "./lib/firebase";
+import { STORE, initialProducts, productsCollection, contentDoc } from "./lib/firebase";
 import {
   buildWhatsAppMessage,
   calculateShipping,
@@ -28,6 +28,35 @@ export default function App() {
 
       if (items.length === 0) {
         await Promise.all(initialProducts.map((product) => addDoc(productsCollection, product)));
+        const defaultContent = {
+  hero: {
+    title: "Alimento vivo de confiança",
+    subtitle: "Para aquário marinho",
+    text: "Copepodes de alta qualidade com envio rápido.",
+    image: "https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?auto=format&fit=crop&w=1400&q=80",
+    button1: "Comprar agora",
+    button2: "Falar no WhatsApp",
+  },
+  features: [
+    {
+      title: "Foco em aquarismo",
+      text: "Produtos pensados para aquário marinho",
+    },
+    {
+      title: "Envio rápido",
+      text: "Entrega ágil para todo Brasil",
+    },
+    {
+      title: "Alta qualidade",
+      text: "Cultivo controlado e seguro",
+    },
+  ],
+  contact: {
+    whatsapp: STORE.whatsappLabel,
+    instagram: STORE.instagram,
+    email: STORE.email,
+  },
+};
         const seededSnapshot = await getDocs(q);
         const seededItems = seededSnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
         setProducts(seededItems);
