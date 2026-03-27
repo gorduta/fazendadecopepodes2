@@ -173,6 +173,7 @@ export default function App() {
 
  return (
   <div className="min-h-screen bg-[#f4efe6] text-[#2a241f]">
+    
     <header className="sticky top-0 z-40 border-b border-[#cdb693] bg-[#244634]/95 text-white backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-6">
 
@@ -200,7 +201,5 @@ export default function App() {
           <a href="#contato">Contato</a>
         </nav>
 
-   </header>
-</div>
-      );
-}
+      </div>
+    </header>
